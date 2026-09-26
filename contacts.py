@@ -27,12 +27,15 @@ def show_contact():
         for person in address_book:
             print(f"{person['name']}的电话号码是{person['num']}")
 
+def save_contact():
+    with open("contacts.json","w",encoding = "utf-8") as f:
+        json.dump(address_book,f,ensure_ascii = False,indent = 2)
+
 print("欢迎使用通讯录程序，添加联系人请按1，查找联系人请按2，遍历联系人请按3，退出程序请按q")
 while True:
     command = input()
     if command == 'q':
-        with open("contacts.json","w",encoding = "utf-8") as f:
-            json.dump(address_book,f,ensure_ascii = False,indent = 2)
+        save_contact()
         print("通讯录已关闭")
         break
     elif command == '1':
