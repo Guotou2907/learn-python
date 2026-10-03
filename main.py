@@ -32,3 +32,26 @@ def get_movies(min_rating: float = 0.0):
         })
 
     return {"count":len(movies_list),"movies":movies_list}
+
+@app.get("/movies/{movie_id}")
+def get_movie(movie_id: int):
+    conn = sqlite3.connect("movies.db")
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT id,name,rating,link FROM movies WHERE id = ?",(movie_id,))
+    row = cursor.fetchone()
+
+    conn.close()
+
+
+    if not row :
+        return {"error": "查无此片"}
+    else:
+        movie = {
+            "id":row[0],
+            "name":row[1],
+            "rating":row[2],
+            "link":row[3]
+            }
+        return {"movie":movie}
+    
