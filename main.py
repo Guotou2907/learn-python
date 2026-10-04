@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
+from fastapi import HTTPException
 import sqlite3
 
 class UTF8JSONResponse(JSONResponse):
@@ -45,7 +46,7 @@ def get_movie(movie_id: int):
 
 
     if not row :
-        return {"error": "查无此片"}
+        raise HTTPException(status_code=404, detail="查无此片")
     else:
         movie = {
             "id":row[0],
