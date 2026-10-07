@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>我的豆瓣电影 Top250</title>
+    <style>
+        /* 简单的美化 */
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .movie { border: 1px solid #ccc; padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .rating { color: #e09015; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>豆瓣电影 Top250</h1>
+    <button onclick="loadMovies()">点击加载电影</button>
+    <div id="movie-list"></div>
+
+    <script>
+        async function loadMovies() {
+            // 1. 找到用来放电影的盒子
+            const listDiv = document.getElementById('movie-list');
+            listDiv.innerHTML = "正在加载数据...";
+
+            try {
+                // 2. 用 fetch 向你的 FastAPI 发请求
+                const response = await fetch('http://127.0.0.1:8000/movies');
+                const data = await response.json(); // 解析 JSON
+
+                // 3. 清空盒子，准备渲染
+                listDiv.innerHTML = "";
+
+                // 4. 遍历电影列表，为每一部电影创建一个 HTML 标签
+                data.movies.slice(0, 10).forEach(movie => { // 先只取前10部，免得页面卡
+                    const movieDiv = document.createElement('div');
+                    movieDiv.className = 'movie';
+                    movieDiv.innerHTML = `
+                        <h3>${movie.name}</h3>
+                        <p class="rating">评分: ${movie.rating}</p>
+                        <a href="${movie.link}" target="_blank">去豆瓣看看</a>
+                    `;
+                    listDiv.appendChild(movieDiv);
+                });
+            } catch (error) {
+                listDiv.innerHTML = "出错了：" + error.message;
+            }
+        }
+    </script>
+</body>
+</html>

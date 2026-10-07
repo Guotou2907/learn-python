@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 from fastapi import HTTPException
 import sqlite3
 
@@ -7,6 +8,39 @@ class UTF8JSONResponse(JSONResponse):
     media_type = "application/json; charset=utf-8"
 
 app = FastAPI(default_response_class=UTF8JSONResponse)
+
+class MovieCreate(BaseModel):
+    name:str
+    rating:float
+    link:str = ""
+
+@app.post("/movies")
+def create_movies(movie:MovieCreate):
+    conn = sqlite3.connect("movies.db")
+    cursor = conn.cursor()
+    # 插入数据
+    cursor.execute(
+        "INSERT INTO movies (name, rating, link) VALUES (?, ?, ?)",
+        (movie.name, movie.rating, movie.link)
+    )
+    conn.commit()
+    
+    # 获取刚才插入的这一行的自增 id
+    new_id = cursor.lastrowid
+    
+    conn.close()
+    
+    return {
+        "message": "添加成功",
+        "movie": {
+            "id": new_id,
+            "name": movie.name,
+            "rating": movie.rating,
+            "link": movie.link
+        }
+    }
+
+
 
 @app.get("/")
 def read_root():
