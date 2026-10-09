@@ -4,33 +4,67 @@
     <meta charset="UTF-8">
     <title>我的豆瓣电影 Top250</title>
     <style>
-        /* 简单的美化 */
         body { font-family: Arial, sans-serif; padding: 20px; }
-        .movie { border: 1px solid #ccc; padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .controls { margin-bottom: 20px; }
+        input { padding: 8px; font-size: 16px; width: 200px; }
+        button { padding: 8px 15px; font-size: 16px; cursor: pointer; }
+        .movie { border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 8px; }
         .rating { color: #e09015; font-weight: bold; }
+        .pagination { margin-top: 20px; text-align: center; }
+        .pagination button { margin: 0 10px; }
     </style>
 </head>
 <body>
     <h1>豆瓣电影 Top250</h1>
-    <button onclick="loadMovies()">点击加载电影</button>
-    <div id="movie-list"></div>
+
+    <!-- 搜索框区域 -->
+    <div class="controls">
+        <input type="text" id="search-input" placeholder="输入电影名称，如：哈利">
+        <button onclick="searchMovies()">搜索</button>
+        <button onclick="resetSearch()">重置</button>
+    </div>
+
+    <!-- 电影列表容器 -->
+    <div id="movie-list">点击搜索或加载电影...</div>
+
+    <!-- 分页按钮 -->
+    <div class="pagination">
+        <button onclick="prevPage()" id="btn-prev" disabled>上一页</button>
+        <span id="page-info"></span>
+        <button onclick="nextPage()" id="btn-next">下一页</button>
+    </div>
 
     <script>
+        // 全局状态
+        let currentPage = 0;
+        const limit = 10;
+        let currentKeyword = "";
+        let totalMovies = 0;
+
+        // 核心加载函数
         async function loadMovies() {
-            // 1. 找到用来放电影的盒子
             const listDiv = document.getElementById('movie-list');
             listDiv.innerHTML = "正在加载数据...";
 
-            try {
-                // 2. 用 fetch 向你的 FastAPI 发请求
-                const response = await fetch('http://127.0.0.1:8000/movies');
-                const data = await response.json(); // 解析 JSON
+            const offset = currentPage * limit;
+            let url = `http://127.0.0.1:8000/movies?limit=${limit}&offset=${offset}`;
+            if (currentKeyword) {
+                url += `&keyword=${encodeURIComponent(currentKeyword)}`;
+            }
 
-                // 3. 清空盒子，准备渲染
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                totalMovies = data.total;
                 listDiv.innerHTML = "";
 
-                // 4. 遍历电影列表，为每一部电影创建一个 HTML 标签
-                data.movies.slice(0, 10).forEach(movie => { // 先只取前10部，免得页面卡
+                if (data.movies.length === 0) {
+                    listDiv.innerHTML = "没有找到符合条件的电影。";
+                    return;
+                }
+
+                data.movies.forEach(movie => {
                     const movieDiv = document.createElement('div');
                     movieDiv.className = 'movie';
                     movieDiv.innerHTML = `
@@ -40,10 +74,55 @@
                     `;
                     listDiv.appendChild(movieDiv);
                 });
+
+                updatePaginationUI();
             } catch (error) {
                 listDiv.innerHTML = "出错了：" + error.message;
             }
         }
+
+        // 更新分页按钮状态和信息
+        function updatePaginationUI() {
+            const totalPages = Math.ceil(totalMovies / limit);
+            document.getElementById('page-info').innerText = `第 ${currentPage + 1} 页 / 共 ${totalPages} 页 (共 ${totalMovies} 部)`;
+            
+            document.getElementById('btn-prev').disabled = (currentPage === 0);
+            document.getElementById('btn-next').disabled = (currentPage >= totalPages - 1);
+        }
+
+        // 翻页
+        function prevPage() {
+            if (currentPage > 0) {
+                currentPage--;
+                loadMovies();
+            }
+        }
+
+        function nextPage() {
+            const totalPages = Math.ceil(totalMovies / limit);
+            if (currentPage < totalPages - 1) {
+                currentPage++;
+                loadMovies();
+            }
+        }
+
+        // 搜索
+        function searchMovies() {
+            currentKeyword = document.getElementById('search-input').value;
+            currentPage = 0; // 搜索时回到第一页
+            loadMovies();
+        }
+
+        // 重置搜索
+        function resetSearch() {
+            document.getElementById('search-input').value = "";
+            currentKeyword = "";
+            currentPage = 0;
+            loadMovies();
+        }
+
+        // 页面一打开就自动加载第一页
+        window.onload = loadMovies;
     </script>
 </body>
 </html>

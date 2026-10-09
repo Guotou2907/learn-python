@@ -33,12 +33,39 @@ class MovieCreate(BaseModel):
     link: str = ""
 
 @app.get("/movies")
-def get_movies(min_rating: float = 0.0, db: Session = Depends(get_db)):
-    # 完全不用写 SQL！直接按面向对象查表
-    movies = db.query(models.MovieDB).filter(models.MovieDB.rating >= min_rating).all()
-    
+def get_movies(
+    min_rating: float = 0.0,
+    keyword: str = "",        # 新增：搜索关键字
+    limit: int = 10,          # 新增：每页条数
+    offset: int = 0,          # 新增：起始位置
+    db: Session = Depends(get_db)
+):
+    # 1. 先建一个基础查询（不执行）
+    query = db.query(models.MovieDB)
+
+    # 2. 如果传了评分条件，加上过滤
+    if min_rating > 0:
+        query = query.filter(models.MovieDB.rating >= min_rating)
+
+    # 3. 如果传了搜索关键字，加上模糊匹配
+    # SQLAlchemy 的 contains 相当于 SQL 里的 LIKE '%keyword%'
+    if keyword:
+        query = query.filter(models.MovieDB.name.contains(keyword))
+
+    # 4. 先算总数（注意：算总数必须要在分页之前）
+    total = query.count()
+
+    # 5. 再执行分页查询
+    movies = query.offset(offset).limit(limit).all()
+
+    # 6. 转换为字典列表返回
     movies_list = [{"id": m.id, "name": m.name, "rating": m.rating, "link": m.link} for m in movies]
-    return {"count": len(movies_list), "movies": movies_list}
+
+    return {
+        "total": total,        # 重要！前端靠这个算总页数
+        "count": len(movies_list), 
+        "movies": movies_list
+    }
 
 @app.get("/movies/{movie_id}")
 def get_movie(movie_id: int, db: Session = Depends(get_db)):
